@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>大冒險地圖</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #182033;
+      --panel: #26324d;
+      --paper: #f8e7bb;
+      --gold: #f7c948;
+      --green: #35c46a;
+      --red: #ef4444;
+      --blue: #60a5fa;
+      --ink: #1c2437;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 20% 18%, rgba(96, 165, 250, 0.28), transparent 28%),
+        radial-gradient(circle at 82% 76%, rgba(247, 201, 72, 0.2), transparent 30%),
+        linear-gradient(45deg, rgba(255, 255, 255, 0.035) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.035) 75%),
+        #12192a;
+      background-size: auto, auto, 34px 34px;
+      color: #f8fafc;
+      font-family: "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
+    }
+
+    button,
+    .level-card {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      min-height: 46px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-weight: 900;
+      box-shadow: 0 8px 0 rgba(2, 6, 23, 0.34);
+    }
+
+    button:active {
+      transform: translateY(4px);
+      box-shadow: 0 4px 0 rgba(2, 6, 23, 0.34);
+    }
+
+    .app {
+      width: min(1120px, 100%);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 26px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 28px;
+      padding-bottom: 18px;
+      border-bottom: 2px solid rgba(248, 250, 252, 0.12);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(34px, 6vw, 62px);
+      line-height: 1;
+      text-shadow: 0 5px 0 #020617;
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      color: rgba(248, 250, 252, 0.78);
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .clear-button {
+      background: #f97316;
+      color: #fff7ed;
+      white-space: nowrap;
+    }
+
+    .map {
+      position: relative;
+      border: 2px solid rgba(247, 201, 72, 0.42);
+      border-radius: 18px;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent),
+        rgba(38, 50, 77, 0.78);
+      padding: 24px;
+      box-shadow: 0 24px 68px rgba(2, 6, 23, 0.36), inset 0 0 32px rgba(247, 201, 72, 0.06);
+    }
+
+    .levels {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+
+    .level-card {
+      display: grid;
+      gap: 10px;
+      align-content: center;
+      min-height: 230px;
+      border: 2px solid rgba(248, 250, 252, 0.14);
+      border-radius: 16px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+        #1f2a44;
+      color: #f8fafc;
+      text-align: center;
+      text-decoration: none;
+      padding: 18px;
+      box-shadow: 0 14px 0 rgba(2, 6, 23, 0.24);
+      transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .level-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(96, 165, 250, 0.76);
+    }
+
+    .level-card.done {
+      border-color: rgba(53, 196, 106, 0.9);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent),
+        #14532d;
+    }
+
+    .level-icon {
+      font-size: 70px;
+      line-height: 1;
+    }
+
+    .level-name {
+      font-size: 24px;
+      font-weight: 900;
+    }
+
+    .level-status {
+      color: rgba(248, 250, 252, 0.8);
+      font-weight: 900;
+    }
+
+    .gate-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      border-top: 2px dashed rgba(248, 250, 252, 0.13);
+      padding-top: 24px;
+    }
+
+    .gate-button {
+      min-width: 220px;
+      background: linear-gradient(180deg, #facc15, #d97706);
+      color: #422006;
+      font-size: 20px;
+    }
+
+    .cert-count {
+      color: #fde68a;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      padding: 20px;
+      background: rgba(2, 6, 23, 0.72);
+      z-index: 10;
+    }
+
+    .modal.show {
+      display: grid;
+    }
+
+    .door-panel {
+      width: min(900px, 100%);
+      max-height: 92vh;
+      overflow: auto;
+      border: 3px solid rgba(247, 201, 72, 0.76);
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+        #1f2937;
+      padding: 22px;
+      box-shadow: 0 0 44px rgba(247, 201, 72, 0.22), 0 24px 70px rgba(0, 0, 0, 0.46);
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .modal-head h2 {
+      margin: 0;
+      color: #fde68a;
+      font-size: 34px;
+    }
+
+    .close-button {
+      background: #475569;
+      color: #f8fafc;
+    }
+
+    .slots {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .slot {
+      display: grid;
+      place-items: center;
+      min-height: 138px;
+      border: 3px dashed rgba(248, 250, 252, 0.22);
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.56);
+      color: rgba(248, 250, 252, 0.72);
+      text-align: center;
+      font-weight: 900;
+      transition: border-color 0.16s ease, background 0.16s ease;
+    }
+
+    .slot.hover {
+      border-color: var(--gold);
+      background: rgba(247, 201, 72, 0.14);
+    }
+
+    .slot.correct {
+      border-style: solid;
+      border-color: var(--green);
+      background: rgba(20, 83, 45, 0.88);
+    }
+
+    .slot.wrong {
+      animation: wrongFlash 0.25s ease;
+    }
+
+    .slot-label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 18px;
+    }
+
+    .bag {
+      min-height: 132px;
+      border: 2px solid rgba(96, 165, 250, 0.4);
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.48);
+      padding: 16px;
+    }
+
+    .bag-title {
+      margin: 0 0 12px;
+      color: #bfdbfe;
+      font-weight: 900;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      min-height: 64px;
+    }
+
+    .badge {
+      display: inline-grid;
+      grid-template-columns: auto auto;
+      align-items: center;
+      gap: 8px;
+      min-height: 54px;
+      border: 2px solid rgba(247, 201, 72, 0.72);
+      border-radius: 999px;
+      background: #f8e7bb;
+      color: var(--ink);
+      padding: 8px 14px;
+      font-weight: 900;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+      box-shadow: 0 8px 0 rgba(2, 6, 23, 0.22);
+    }
+
+    .badge.dragging {
+      position: fixed;
+      z-index: 30;
+      pointer-events: none;
+      width: var(--drag-w);
+      opacity: 0.96;
+      transform: translate(-50%, -50%) scale(1.05);
+    }
+
+    .badge.locked {
+      cursor: default;
+      border-color: var(--green);
+      background: #bbf7d0;
+      box-shadow: none;
+    }
+
+    .badge-placeholder {
+      visibility: hidden;
+      min-width: 150px;
+      min-height: 54px;
+    }
+
+    .complete-screen {
+      display: none;
+      text-align: center;
+      padding: 28px 12px;
+    }
+
+    .complete-screen.show {
+      display: block;
+      animation: goldGlow 0.7s ease;
+    }
+
+    .complete-screen h2 {
+      margin: 0 0 12px;
+      color: #fde68a;
+      font-size: clamp(36px, 7vw, 66px);
+    }
+
+    .complete-screen p {
+      color: #f8fafc;
+      font-size: 22px;
+      font-weight: 900;
+    }
+
+    .again-button {
+      background: var(--green);
+      color: #052e16;
+    }
+
+    @keyframes wrongFlash {
+      0%, 100% { box-shadow: none; }
+      50% { box-shadow: 0 0 28px rgba(239, 68, 68, 0.92), inset 0 0 22px rgba(239, 68, 68, 0.28); }
+    }
+
+    @keyframes goldGlow {
+      0% { filter: brightness(1); }
+      45% { filter: brightness(1.55); }
+      100% { filter: brightness(1); }
+    }
+
+    @media (max-width: 780px) {
+      .app {
+        padding: 16px;
+      }
+
+      .topbar,
+      .modal-head {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .levels,
+      .slots {
+        grid-template-columns: 1fr;
+      }
+
+      .level-card {
+        min-height: 170px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>大冒險地圖</h1>
+        <p class="subtitle">完成 3 個關卡，拿到 3 個憑證解開大門</p>
+      </div>
+      <button class="clear-button" id="clearButton" type="button">🔄 清除進度</button>
+    </header>
+
+    <section class="map">
+      <div class="levels" id="levels"></div>
+
+      <div class="gate-row">
+        <button class="gate-button" id="gateButton" type="button">🔒 通關大門</button>
+        <span class="cert-count">目前持有：<span id="certCount">0</span> / 3</span>
+      </div>
+    </section>
+  </main>
+
+  <section class="modal" id="gateModal" aria-live="polite">
+    <div class="door-panel">
+      <div id="doorPuzzle">
+        <div class="modal-head">
+          <div>
+            <h2>通關大門</h2>
+            <p>把背包裡的憑證拖到對應凹槽，三個都正確就能開門。</p>
+          </div>
+          <button class="close-button" id="closeModalButton" type="button">關閉</button>
+        </div>
+
+        <div class="slots" id="slots"></div>
+
+        <div class="bag">
+          <p class="bag-title">背包欄</p>
+          <div class="badge-row" id="badgeBag"></div>
+        </div>
+      </div>
+
+      <div class="complete-screen" id="completeScreen">
+        <h2>🏆 冒險完成！</h2>
+        <p>總冒險時長：<span id="durationText">00 分 00 秒</span></p>
+        <button class="again-button" id="againButton" type="button">再次冒險</button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const LEVELS = [
+      {
+        key: "cert_dynasty",
+        type: "dynasty",
+        icon: "🎴",
+        name: "朝代配對",
+        href: "../示範1_朝代配對/index.html",
+        certName: "朝代之印",
+        slotLabel: "朝代"
+      },
+      {
+        key: "cert_idiom",
+        type: "idiom",
+        icon: "📝",
+        name: "成語填字",
+        href: "../示範2_成語填字/index.html",
+        certName: "成語之印",
+        slotLabel: "成語"
+      },
+      {
+        key: "cert_warrior",
+        type: "warrior",
+        icon: "⚔️",
+        name: "打怪 RPG",
+        href: "../示範3_打怪RPG/index.html",
+        certName: "勇者之印",
+        slotLabel: "勇者"
+      }
+    ];
+
+    const levelsEl = document.getElementById("levels");
+    const certCountEl = document.getElementById("certCount");
+    const clearButton = document.getElementById("clearButton");
+    const gateButton = document.getElementById("gateButton");
+    const gateModal = document.getElementById("gateModal");
+    const closeModalButton = document.getElementById("closeModalButton");
+    const slotsEl = document.getElementById("slots");
+    const badgeBag = document.getElementById("badgeBag");
+    const doorPuzzle = document.getElementById("doorPuzzle");
+    const completeScreen = document.getElementById("completeScreen");
+    const durationText = document.getElementById("durationText");
+    const againButton = document.getElementById("againButton");
+
+    let dragState = null;
+
+    function init() {
+      if (!localStorage.getItem("adventure_start")) {
+        localStorage.setItem("adventure_start", String(Date.now()));
+      }
+      renderLevels();
+    }
+
+    function renderLevels() {
+      levelsEl.innerHTML = "";
+      const completed = LEVELS.filter((level) => hasCert(level.key));
+      certCountEl.textContent = completed.length;
+
+      LEVELS.forEach((level, index) => {
+        const done = hasCert(level.key);
+        const link = document.createElement("a");
+        link.className = `level-card${done ? " done" : ""}`;
+        link.href = level.href;
+        link.innerHTML = `
+          <div class="level-icon">${level.icon}</div>
+          <div class="level-name">關卡 ${index + 1}：${level.name}</div>
+          <div class="level-status">${done ? "已完成 ✓" : "未完成"}</div>
+        `;
+        levelsEl.appendChild(link);
+      });
+    }
+
+    function openGate() {
+      gateModal.classList.add("show");
+      doorPuzzle.style.display = "";
+      completeScreen.classList.remove("show");
+      renderDoorPuzzle();
+    }
+
+    function renderDoorPuzzle() {
+      slotsEl.innerHTML = "";
+      badgeBag.innerHTML = "";
+
+      LEVELS.forEach((level) => {
+        const slot = document.createElement("div");
+        slot.className = "slot";
+        slot.dataset.type = level.type;
+        slot.innerHTML = `<div><span class="slot-label">${level.slotLabel}</span><span>等待憑證</span></div>`;
+        slotsEl.appendChild(slot);
+      });
+
+      const certs = LEVELS.filter((level) => hasCert(level.key));
+      if (certs.length === 0) {
+        badgeBag.innerHTML = "<span>目前還沒有憑證。先去完成關卡吧。</span>";
+        return;
+      }
+
+      certs.forEach((level) => {
+        const badge = document.createElement("div");
+        badge.className = "badge";
+        badge.draggable = true;
+        badge.dataset.type = level.type;
+        badge.innerHTML = `<span>${level.icon}</span><span>${level.certName}</span>`;
+        badge.addEventListener("dragstart", handleHtmlDragStart);
+        badge.addEventListener("dragend", handleHtmlDragEnd);
+        badge.addEventListener("pointerdown", startPointerDrag);
+        badgeBag.appendChild(badge);
+      });
+    }
+
+    slotsEl.addEventListener("dragover", (event) => {
+      const slot = event.target.closest(".slot");
+      if (!slot || slot.classList.contains("correct")) return;
+      event.preventDefault();
+      slot.classList.add("hover");
+    });
+
+    slotsEl.addEventListener("dragleave", (event) => {
+      const slot = event.target.closest(".slot");
+      if (!slot || slot.contains(event.relatedTarget)) return;
+      slot.classList.remove("hover");
+    });
+
+    slotsEl.addEventListener("drop", (event) => {
+      const slot = event.target.closest(".slot");
+      if (!slot || slot.classList.contains("correct")) return;
+      event.preventDefault();
+      slot.classList.remove("hover");
+      const type = event.dataTransfer.getData("text/plain");
+      const badge = document.querySelector(`.badge[data-type="${type}"]:not(.locked)`);
+      tryPlaceBadge(badge, slot);
+    });
+
+    function handleHtmlDragStart(event) {
+      if (event.currentTarget.classList.contains("locked")) {
+        event.preventDefault();
+        return;
+      }
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", event.currentTarget.dataset.type);
+      event.currentTarget.classList.add("dragging-html");
+    }
+
+    function handleHtmlDragEnd(event) {
+      event.currentTarget.classList.remove("dragging-html");
+    }
+
+    function startPointerDrag(event) {
+      const badge = event.currentTarget;
+      if (badge.classList.contains("locked")) return;
+
+      event.preventDefault();
+      const rect = badge.getBoundingClientRect();
+      const placeholder = document.createElement("div");
+      placeholder.className = "badge-placeholder";
+      placeholder.style.width = `${rect.width}px`;
+      placeholder.style.height = `${rect.height}px`;
+      badge.parentNode.insertBefore(placeholder, badge);
+
+      badge.style.setProperty("--drag-w", `${rect.width}px`);
+      badge.classList.add("dragging");
+      document.body.appendChild(badge);
+      badge.setPointerCapture(event.pointerId);
+
+      dragState = { badge, placeholder, pointerId: event.pointerId };
+      moveBadge(event.clientX, event.clientY);
+      window.addEventListener("pointermove", movePointerDrag);
+      window.addEventListener("pointerup", endPointerDrag);
+      window.addEventListener("pointercancel", cancelPointerDrag);
+    }
+
+    function movePointerDrag(event) {
+      if (!dragState || event.pointerId !== dragState.pointerId) return;
+      event.preventDefault();
+      moveBadge(event.clientX, event.clientY);
+      clearSlotHover();
+      const slot = getSlotAt(event.clientX, event.clientY);
+      if (slot && !slot.classList.contains("correct")) slot.classList.add("hover");
+    }
+
+    function endPointerDrag(event) {
+      if (!dragState || event.pointerId !== dragState.pointerId) return;
+      cleanupPointerDrag();
+      clearSlotHover();
+      const slot = getSlotAt(event.clientX, event.clientY);
+      if (slot && !slot.classList.contains("correct")) {
+        tryPlaceBadge(dragState.badge, slot);
+      } else {
+        returnBadge();
+      }
+      dragState = null;
+    }
+
+    function cancelPointerDrag() {
+      cleanupPointerDrag();
+      clearSlotHover();
+      returnBadge();
+      dragState = null;
+    }
+
+    function moveBadge(x, y) {
+      dragState.badge.style.left = `${x}px`;
+      dragState.badge.style.top = `${y}px`;
+    }
+
+    function getSlotAt(x, y) {
+      dragState.badge.style.display = "none";
+      const target = document.elementFromPoint(x, y);
+      dragState.badge.style.display = "";
+      return target ? target.closest(".slot") : null;
+    }
+
+    function tryPlaceBadge(badge, slot) {
+      if (!badge || !slot) return;
+
+      if (badge.dataset.type === slot.dataset.type) {
+        placeBadge(badge, slot);
+      } else {
+        slot.classList.remove("wrong");
+        void slot.offsetWidth;
+        slot.classList.add("wrong");
+        setTimeout(() => slot.classList.remove("wrong"), 260);
+        returnBadge(badge);
+      }
+    }
+
+    function placeBadge(badge, slot) {
+      if (dragState && dragState.badge === badge) {
+        dragState.placeholder.remove();
+      }
+      badge.classList.remove("dragging");
+      badge.classList.add("locked");
+      badge.draggable = false;
+      badge.style.removeProperty("left");
+      badge.style.removeProperty("top");
+      badge.style.removeProperty("--drag-w");
+      slot.classList.add("correct");
+      slot.innerHTML = "";
+      slot.appendChild(badge);
+      checkDoorComplete();
+    }
+
+    function returnBadge(explicitBadge) {
+      const badge = explicitBadge || (dragState && dragState.badge);
+      if (!badge) return;
+      badge.classList.remove("dragging");
+      badge.style.removeProperty("left");
+      badge.style.removeProperty("top");
+      badge.style.removeProperty("--drag-w");
+
+      if (dragState && dragState.badge === badge) {
+        dragState.placeholder.replaceWith(badge);
+      } else {
+        badgeBag.appendChild(badge);
+      }
+    }
+
+    function checkDoorComplete() {
+      const placed = slotsEl.querySelectorAll(".slot.correct").length;
+      if (placed === 3) {
+        setTimeout(showComplete, 450);
+      }
+    }
+
+    function showComplete() {
+      doorPuzzle.style.display = "none";
+      durationText.textContent = formatDuration(Date.now() - Number(localStorage.getItem("adventure_start") || Date.now()));
+      completeScreen.classList.add("show");
+    }
+
+    function formatDuration(ms) {
+      const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+      const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+      const seconds = String(totalSeconds % 60).padStart(2, "0");
+      return `${minutes} 分 ${seconds} 秒`;
+    }
+
+    function cleanupPointerDrag() {
+      window.removeEventListener("pointermove", movePointerDrag);
+      window.removeEventListener("pointerup", endPointerDrag);
+      window.removeEventListener("pointercancel", cancelPointerDrag);
+    }
+
+    function clearSlotHover() {
+      document.querySelectorAll(".slot.hover").forEach((slot) => slot.classList.remove("hover"));
+    }
+
+    function hasCert(key) {
+      return localStorage.getItem(key) === "true";
+    }
+
+    function clearProgress() {
+      ["cert_dynasty", "cert_idiom", "cert_warrior", "adventure_start"].forEach((key) => localStorage.removeItem(key));
+      localStorage.setItem("adventure_start", String(Date.now()));
+      gateModal.classList.remove("show");
+      renderLevels();
+    }
+
+    clearButton.addEventListener("click", clearProgress);
+    gateButton.addEventListener("click", openGate);
+    closeModalButton.addEventListener("click", () => gateModal.classList.remove("show"));
+    againButton.addEventListener("click", clearProgress);
+    gateModal.addEventListener("click", (event) => {
+      if (event.target === gateModal) gateModal.classList.remove("show");
+    });
+
+    init();
+  </script>
+</body>
+</html>
