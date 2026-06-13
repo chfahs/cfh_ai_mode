@@ -357,6 +357,77 @@
       animation: goldGlow 0.7s ease;
     }
 
+    .ending-sequence {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: none;
+      overflow: hidden;
+      background: #090603;
+      color: #fff7df;
+      cursor: pointer;
+    }
+
+    .ending-sequence.show {
+      display: block;
+    }
+
+    .ending-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      user-select: none;
+      -webkit-user-drag: none;
+      animation: endingImageIn 0.8s ease;
+    }
+
+    .ending-caption {
+      position: absolute;
+      left: 50%;
+      bottom: clamp(22px, 6vh, 58px);
+      width: min(880px, calc(100vw - 36px));
+      transform: translateX(-50%);
+      border: 1px solid rgba(255, 226, 160, 0.45);
+      border-radius: 8px;
+      background: rgba(22, 13, 7, 0.74);
+      padding: clamp(16px, 3vw, 26px);
+      box-shadow: 0 18px 46px rgba(0, 0, 0, 0.42);
+      backdrop-filter: blur(4px);
+      animation: captionIn 0.7s ease;
+    }
+
+    .ending-kicker {
+      margin: 0 0 8px;
+      color: var(--gold-light);
+      font-size: clamp(15px, 2vw, 20px);
+      font-weight: 900;
+    }
+
+    .ending-title {
+      margin: 0 0 12px;
+      color: #fff1c2;
+      font-size: clamp(28px, 4.2vw, 48px);
+      line-height: 1.1;
+      text-shadow: 0 3px 0 rgba(63, 29, 8, 0.62);
+    }
+
+    .ending-text {
+      margin: 0;
+      color: #fff8e5;
+      font-size: clamp(18px, 2.3vw, 25px);
+      font-weight: 800;
+      line-height: 1.7;
+    }
+
+    .ending-hint {
+      margin: 12px 0 0;
+      color: rgba(255, 247, 223, 0.64);
+      font-size: 13px;
+      font-weight: 800;
+      text-align: right;
+    }
+
     .again-button {
       margin-top: 22px;
       background: linear-gradient(180deg, #54d885, #1d9d54);
@@ -372,6 +443,16 @@
       0% { filter: brightness(1); }
       45% { filter: brightness(1.55); }
       100% { filter: brightness(1); }
+    }
+
+    @keyframes endingImageIn {
+      from { opacity: 0; transform: scale(1.018); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes captionIn {
+      from { opacity: 0; transform: translate(-50%, 14px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
     }
 
     @media (max-width: 760px) {
@@ -410,6 +491,14 @@
 
       .slots {
         grid-template-columns: 1fr;
+      }
+
+      .ending-caption {
+        bottom: 14px;
+      }
+
+      .ending-hint {
+        text-align: left;
       }
     }
   </style>
@@ -463,6 +552,16 @@
     </div>
   </section>
 
+  <section class="ending-sequence" id="endingSequence" aria-live="polite">
+    <img class="ending-image" id="endingImage" src="pic1.PNG" alt="三印開天門結局過場" />
+    <div class="ending-caption">
+      <p class="ending-kicker" id="endingKicker">三印開天門</p>
+      <h2 class="ending-title" id="endingTitle">三枚印記歸位</h2>
+      <p class="ending-text" id="endingText">三枚印記沒有發出勝利的聲音。它們只是安靜地亮起，像終於想起自己的名字。</p>
+      <p class="ending-hint">點一下繼續</p>
+    </div>
+  </section>
+
   <script>
     const LEVELS = [
       {
@@ -503,8 +602,37 @@
     const completeScreen = document.getElementById("completeScreen");
     const durationText = document.getElementById("durationText");
     const againButton = document.getElementById("againButton");
+    const endingSequence = document.getElementById("endingSequence");
+    const endingImage = document.getElementById("endingImage");
+    const endingKicker = document.getElementById("endingKicker");
+    const endingTitle = document.getElementById("endingTitle");
+    const endingText = document.getElementById("endingText");
+
+    const ENDING_SCENES = [
+      {
+        image: "pic1.PNG",
+        title: "三枚印記歸位",
+        text: "三枚印記沒有發出勝利的聲音。它們只是安靜地亮起，像終於想起自己的名字。"
+      },
+      {
+        image: "pic2.PNG",
+        title: "門後不是終點",
+        text: "門後沒有王冠，也沒有掌聲。只有一條更遠的路，和剛好足夠照亮腳邊的光。"
+      },
+      {
+        image: "pic3.PNG",
+        title: "地圖開始改變",
+        text: "原來地圖不是用來告訴我們到哪裡結束，是提醒我們曾經怎麼走來。"
+      },
+      {
+        image: "pic4.PNG",
+        title: "新的冒險留白",
+        text: "有些門，一生只開一次。有些冒險，會在你合上地圖之後，才真正開始。"
+      }
+    ];
 
     let dragState = null;
+    let endingIndex = 0;
 
     function init() {
       if (!sessionStorage.getItem(COVER_SEEN_KEY)) {
@@ -548,6 +676,7 @@
       gateModal.classList.add("show");
       doorPuzzle.style.display = "";
       completeScreen.classList.remove("show");
+      endingSequence.classList.remove("show");
       renderDoorPuzzle();
     }
 
@@ -734,8 +863,43 @@
     function checkDoorComplete() {
       const placed = slotsEl.querySelectorAll(".slot.correct").length;
       if (placed === 3) {
-        setTimeout(showComplete, 450);
+        setTimeout(startEndingSequence, 450);
       }
+    }
+
+    function startEndingSequence() {
+      gateModal.classList.remove("show");
+      doorPuzzle.style.display = "none";
+      endingIndex = 0;
+      renderEndingScene();
+      endingSequence.classList.add("show");
+    }
+
+    function renderEndingScene() {
+      const scene = ENDING_SCENES[endingIndex];
+      endingImage.src = scene.image;
+      endingImage.alt = `三印開天門：${scene.title}`;
+      endingKicker.textContent = "三印開天門";
+      endingTitle.textContent = scene.title;
+      endingText.textContent = scene.text;
+
+      endingImage.style.animation = "none";
+      endingTitle.parentElement.style.animation = "none";
+      void endingImage.offsetWidth;
+      endingImage.style.animation = "";
+      endingTitle.parentElement.style.animation = "";
+    }
+
+    function advanceEnding() {
+      if (!endingSequence.classList.contains("show")) return;
+      endingIndex += 1;
+      if (endingIndex >= ENDING_SCENES.length) {
+        endingSequence.classList.remove("show");
+        gateModal.classList.add("show");
+        showComplete();
+        return;
+      }
+      renderEndingScene();
     }
 
     function showComplete() {
@@ -782,6 +946,7 @@
     });
 
     coverScreen.addEventListener("click", closeCover);
+    endingSequence.addEventListener("click", advanceEnding);
     clearButton.addEventListener("click", clearAllStorageAndRestart);
     closeModalButton.addEventListener("click", () => gateModal.classList.remove("show"));
     againButton.addEventListener("click", clearAllStorageAndRestart);
